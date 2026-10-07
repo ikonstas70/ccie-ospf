@@ -1,11 +1,15 @@
-# CCIE Routing Study Reference
+# Mastering OSPF
 
-CCIE Enterprise Infrastructure study notes — OSPF area hierarchy, DMVPN (GRE/mGRE/NHRP), and OSPF vs. BGP summarization.
+A CCIE Enterprise Infrastructure series on link-state routing — area design, LSA filtering, summarization, and the overlays OSPF runs across.
 
-Live site: https://ikonstas70.github.io/ccie-ospf/
+**Live:** https://ikonstas70.github.io/ccie-ospf/
 
-- `dmvpn-gre-mgre-nhrp.html` — Point-to-point GRE vs. mGRE, and how NHRP resolves overlay tunnel addresses to underlay transport addresses.
-- `ospf-area-types-hierarchy.html` — Normal, Stub, Totally Stubby, and NSSA areas; ABR/ASBR roles; the rule for whether an area can contain an ASBR.
-- `ospf-bgp-summarization.html` — NLRI and BGP route summarization vs. OSPF inter-area Type-3 summarization; why one hides routes and the other hides topology; the IGP/BGP division of labor.
+| # | Chapter | File |
+|---|---------|------|
+| 01 | OSPF Area Types & Hierarchy | `ospf-area-types-and-hierarchy.html` |
+| 02 | OSPF vs BGP — Summarization & Architecture | `ospf-vs-bgp-summarization.html` |
+| 03 | DMVPN — GRE, mGRE & NHRP | `dmvpn-gre-mgre-nhrp.html` |
+| 04 | OSPF Type-5 LSAs — Intra-Area vs Inter-Area Reachability | `ospf-type5-lsa-external-reachability.html` |
+| 05 | OSPFv3 — *in progress* | |
 
 — Ioannis Alexander Konstas

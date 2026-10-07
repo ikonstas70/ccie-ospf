@@ -4,61 +4,121 @@
 <link rel="canonical" href="https://ikonstas70.github.io/ccie-ospf/">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>CCIE OSPF &amp; Routing Study Reference</title>
-<meta name="description" content="CCIE Enterprise Infrastructure study reference: OSPF area hierarchy, DMVPN (GRE/mGRE/NHRP), and OSPF vs. BGP summarization — Ioannis Alexander Konstas.">
+<title>Mastering OSPF | Ioannis Konstas</title>
+<meta name="description" content="Mastering OSPF — a CCIE-level series on link-state routing: area design, LSA filtering, summarization, and the overlays OSPF runs across.">
 <meta name="author" content="Ioannis Alexander Konstas">
 <meta property="og:type" content="website">
+<meta property="og:site_name" content="Ioannis Konstas">
+<meta property="og:title" content="Mastering OSPF">
+<meta property="og:description" content="A CCIE-level series on link-state routing: area design, LSA filtering, summarization, and the overlays OSPF runs across.">
 <meta property="og:url" content="https://ikonstas70.github.io/ccie-ospf/">
-<meta property="og:title" content="CCIE OSPF &amp; Routing Study Reference">
-<meta property="og:description" content="CCIE Enterprise Infrastructure study reference: OSPF area hierarchy, DMVPN (GRE/mGRE/NHRP), and OSPF vs. BGP summarization.">
-<meta property="og:site_name" content="CCIE OSPF Study Reference">
-<meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="CCIE OSPF &amp; Routing Study Reference">
-<meta name="twitter:description" content="OSPF area hierarchy, DMVPN (GRE/mGRE/NHRP), and OSPF vs. BGP summarization — a CCIE study reference.">
-
+<meta property="og:image" content="https://ikonstas70.github.io/ccie-ospf/ospf-og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Mastering OSPF">
+<meta name="twitter:description" content="A CCIE-level series on link-state routing: area design, LSA filtering, summarization, and the overlays OSPF runs across.">
+<meta name="twitter:image" content="https://ikonstas70.github.io/ccie-ospf/ospf-og.jpg">
 <link rel="stylesheet" href="/ccie-ospf/style.css">
+<style>
+  .series-head { text-align: center; margin: 8px 0 44px; }
+  .series-head h1 { font-size: 2.6rem; letter-spacing: 0.01em; margin-bottom: 14px; }
+  .series-head h1 em { color: var(--accent); font-style: italic; }
+  .series-head .section-intro { max-width: 600px; margin: 0 auto; }
+  .part { display: flex; align-items: baseline; gap: 14px; margin: 46px 0 16px; }
+  .part .num { font-family: var(--serif); color: var(--accent); font-size: 0.9rem; letter-spacing: 0.2em; }
+  .part h2 { margin: 0; font-size: 1.05rem; letter-spacing: 0.22em; text-transform: uppercase; font-family: var(--sans); color: var(--fg-dim); font-weight: 500; }
+  .part::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+  .chapter { display: grid; grid-template-columns: 3.2rem 1fr; gap: 0 10px; text-decoration: none; }
+  .chapter .idx { font-family: var(--serif); font-size: 1.9rem; line-height: 1; color: var(--accent-dim); transition: color .2s; padding-top: 2px; }
+  .chapter:hover .idx { color: var(--accent); }
+  .chapter h3 { margin-top: 0; }
+  .card.upcoming { opacity: 0.55; cursor: default; }
+  .card.upcoming:hover { transform: none; border-color: var(--border); }
+  @media (max-width: 520px) {
+    .series-head h1 { font-size: 2rem; }
+    .chapter { grid-template-columns: 2.4rem 1fr; }
+    .chapter .idx { font-size: 1.5rem; }
+  }
+</style>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-BZK50T0JFT"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag("js",new Date());gtag("config","G-BZK50T0JFT");</script>
 </head>
 <body>
 <div class="wrap">
   <header class="site">
-    <a class="brand" href="/ccie-ospf/">CCIE Routing<em>.</em></a>
-    <div class="tagline">OSPF &middot; DMVPN &middot; BGP &middot; Study Reference</div>
+    <a class="brand" href="/ccie-ospf/">Mastering OSPF<em>.</em></a>
+    <div class="tagline">Link-State Routing &middot; CCIE Enterprise Infrastructure</div>
     <div class="rule"></div>
     <nav class="top">
-      <a href="/ccie-ospf/" class="active">Overview</a>
+      <a class="active" href="/ccie-ospf/">Series</a>
+      <a href="/ccie-ospf/ospf-area-types-and-hierarchy.html">Areas</a>
+      <a href="/ccie-ospf/ospf-vs-bgp-summarization.html">Summarization</a>
       <a href="/ccie-ospf/dmvpn-gre-mgre-nhrp.html">DMVPN</a>
-      <a href="/ccie-ospf/ospf-area-types-hierarchy.html">OSPF Areas</a>
-      <a href="/ccie-ospf/ospf-bgp-summarization.html">OSPF vs BGP</a>
-      <a href="https://ikonstas70.github.io/information-security/">Information Security ↗</a>
-      <a href="https://ikonstas70.github.io/">Konstas.Engineering Notes &#8593;</a>
+      <a href="/ccie-ospf/ospf-type5-lsa-external-reachability.html">Type-5 LSAs</a>
+      <a href="https://ikonstas70.github.io/">Home &#8593;</a>
     </nav>
   </header>
 
   <main>
-    <h1 style="text-align:center">CCIE Routing Study Reference</h1>
-    <p class="section-intro">Working notes from CCIE Enterprise Infrastructure lab study, rebuilt from a long Q&amp;A session into three focused reference articles: how DMVPN actually resolves spoke addresses, how OSPF's area hierarchy really contains topology (not just routes), and where OSPF's job ends and BGP's begins.</p>
+    <img class="hero-banner" src="/ccie-ospf/hero-chip.jpg" alt="Macro photograph of an integrated circuit die">
 
-    <a class="card" href="/ccie-ospf/dmvpn-gre-mgre-nhrp.html">
-      <h3>DMVPN — GRE, mGRE &amp; NHRP</h3>
-      <p>Why point-to-point GRE needs a manual tunnel destination, why mGRE removes it entirely, and how NHRP acts as the overlay↔underlay translator — the ARP-for-DMVPN mental model, with hub/spoke registration examples.</p>
-      <span class="date">DMVPN &middot; Tunneling</span>
+    <div class="series-head">
+      <h1>Mastering <em>OSPF</em></h1>
+      <p class="section-intro">A working series from my CCIE Enterprise Infrastructure study. Each chapter takes one part of OSPF, from area design to summarization to the overlays it runs on, and explains why it behaves the way it does, not just how to configure it.</p>
+    </div>
+
+    <div class="part"><span class="num">I</span><h2>Design</h2></div>
+    <a class="card chapter" href="/ccie-ospf/ospf-area-types-and-hierarchy.html">
+      <span class="idx">01</span>
+      <div>
+        <h3>OSPF Area Types &amp; Hierarchy</h3>
+        <p>Normal, stub, totally stubby and NSSA areas; ABR and ASBR roles; and which LSAs each area type filters out.</p>
+        <span class="date">Areas &middot; LSA Filtering</span>
+      </div>
+    </a>
+    <a class="card chapter" href="/ccie-ospf/ospf-vs-bgp-summarization.html">
+      <span class="idx">02</span>
+      <div>
+        <h3>OSPF vs BGP: Summarization &amp; Architecture</h3>
+        <p>Inter-area Type-3 summarization hides topology; BGP aggregation hides routes. Why the difference matters, and how IGP and EGP split the work.</p>
+        <span class="date">Summarization &middot; IGP vs EGP</span>
+      </div>
     </a>
 
-    <a class="card" href="/ccie-ospf/ospf-area-types-hierarchy.html">
-      <h3>OSPF Area Types &amp; Hierarchy — Stub, Totally Stubby, NSSA</h3>
-      <p>A practical guide to Normal, Stub, Totally Stubby, and NSSA areas, the ABR/ASBR role split, the "can this area contain an ASBR?" exam rule, and the common misconception that topology alone makes an area a stub.</p>
-      <span class="date">OSPF &middot; Areas</span>
+    <div class="part"><span class="num">II</span><h2>Transport</h2></div>
+    <a class="card chapter" href="/ccie-ospf/dmvpn-gre-mgre-nhrp.html">
+      <span class="idx">03</span>
+      <div>
+        <h3>DMVPN: GRE, mGRE &amp; NHRP</h3>
+        <p>Overlay versus underlay, point-to-point versus multipoint tunnels, and how NHRP maps tunnel addresses to transport, the network OSPF runs across.</p>
+        <span class="date">Overlays &middot; NHRP</span>
+      </div>
     </a>
 
-    <a class="card" href="/ccie-ospf/ospf-bgp-summarization.html">
-      <h3>OSPF vs. BGP — Summarization &amp; the IGP/BGP Relationship</h3>
-      <p>NLRI and route summarization in BGP, inter-area Type-3 summarization in OSPF, why OSPF summarization hides topology while BGP summarization hides routes, and why BGP is best understood as "an application" running on top of the IGP.</p>
-      <span class="date">OSPF &middot; BGP &middot; Design</span>
+    <div class="part"><span class="num">III</span><h2>LSA Mechanics</h2></div>
+    <a class="card chapter" href="/ccie-ospf/ospf-type5-lsa-external-reachability.html">
+      <span class="idx">04</span>
+      <div>
+        <h3>OSPF Type-5 LSAs: Intra-Area vs Inter-Area Reachability</h3>
+        <p>A Type-5 LSA describes the destination, not the path. How routers reach the ASBR through Type-1/2 and Type-4 LSAs, and why E1 makes that path count.</p>
+        <span class="date">External Routes &middot; Type-4 / Type-5</span>
+      </div>
     </a>
+
+    <div class="part"><span class="num">IV</span><h2>Next</h2></div>
+    <div class="card chapter upcoming">
+      <span class="idx">05</span>
+      <div>
+        <h3>OSPFv3: OSPF for IPv6 and Beyond</h3>
+        <p>Link-local adjacencies, the new LSA types, address families, and what changed from v2.</p>
+        <span class="date">In Progress</span>
+      </div>
+    </div>
   </main>
 
   <footer class="site">
-    <p>&copy; 2026 Ioannis Konstas &middot; <a href="https://github.com/ikonstas70">github.com/ikonstas70</a></p>
+    <p>&copy; 2026 Ioannis Konstas &middot; <a href="https://ikonstas70.github.io/">ikonstas70.github.io</a> &middot; <a href="https://github.com/ikonstas70/ccie-ospf">source</a></p>
   </footer>
 </div>
 </body>

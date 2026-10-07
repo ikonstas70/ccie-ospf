@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="canonical" href="https://ikonstas70.github.io/ccie-ospf/ospf-type5-lsa-external-reachability.html">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OSPF Type-5 LSAs: Intra-Area vs Inter-Area Reachability | Mastering OSPF</title>
+<meta name="description" content="A Type-5 LSA describes the destination, not the path. How OSPF routers resolve external routes through Type-1/2 and Type-4 LSAs, and why E1 makes the path matter.">
+<meta name="author" content="Ioannis Alexander Konstas">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Mastering OSPF">
+<meta property="og:title" content="OSPF Type-5 LSAs: The Missing Link Between Intra-Area and Inter-Area Reachability">
+<meta property="og:description" content="A Type-5 LSA describes the destination, not the path. How OSPF routers resolve external routes through Type-1/2 and Type-4 LSAs.">
+<meta property="og:url" content="https://ikonstas70.github.io/ccie-ospf/ospf-type5-lsa-external-reachability.html">
+<meta property="og:image" content="https://ikonstas70.github.io/ccie-ospf/ospf-og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="OSPF Type-5 LSAs: The Missing Link Between Intra-Area and Inter-Area Reachability">
+<meta name="twitter:description" content="A Type-5 LSA describes the destination, not the path. How OSPF routers resolve external routes through Type-1/2 and Type-4 LSAs.">
+<meta name="twitter:image" content="https://ikonstas70.github.io/ccie-ospf/ospf-og.jpg">
+<link rel="stylesheet" href="/ccie-ospf/style.css">
+<!-- Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-BZK50T0JFT"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag("js",new Date());gtag("config","G-BZK50T0JFT");</script>
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <a class="brand" href="/ccie-ospf/">Mastering OSPF<em>.</em></a>
+    <div class="tagline">Chapter 04 &middot; Link-State Routing &middot; CCIE</div>
+    <div class="rule"></div>
+    <nav class="top">
+      <a href="/ccie-ospf/">Series</a>
+      <a href="/ccie-ospf/ospf-area-types-and-hierarchy.html">Areas</a>
+      <a href="/ccie-ospf/ospf-vs-bgp-summarization.html">Summarization</a>
+      <a href="/ccie-ospf/dmvpn-gre-mgre-nhrp.html">DMVPN</a>
+      <a href="/ccie-ospf/ospf-type5-lsa-external-reachability.html" class="active">Type-5 LSAs</a>
+      <a href="https://ikonstas70.github.io/">Home &#8593;</a>
+    </nav>
+  </header>
+
+  <main>
+    <img class="hero-banner" src="/ccie-ospf/hero-chip.jpg" alt="Macro photograph of an integrated circuit die">
+    <h1>OSPF Type-5 LSAs: The Missing Link Between Intra-Area and Inter-Area Reachability</h1>
+    <div class="meta">
+      <span class="tag">CCIE</span>
+      <span class="tag">OSPF</span>
+      <span class="tag">Type-5 LSA</span>
+      <span class="tag">Type-4 LSA</span>
+      <span class="tag">ASBR</span>
+      <span class="tag">E1 / E2</span>
+    </div>
+
+    <div class="section-intro">
+      <p>One of the most misunderstood topics in OSPF is how routers actually reach a destination described by a Type-5 LSA. Many engineers learn that Type-5 LSAs represent external routes, then get confused about whether that route is reached through an intra-area or an inter-area path.</p>
+    </div>
+
+    <div class="callout">
+      <strong>The key realization:</strong> a Type-5 LSA does not tell a router <em>how</em> to reach the destination. It only tells the router that the destination <em>exists</em>. The router must first work out how to reach the ASBR (Autonomous System Boundary Router) that originated it.
+    </div>
+
+    <p>Once you understand this separation, the entire mechanism becomes straightforward.</p>
+
+    <!-- Section 1 -->
+    <div class="sec-head">
+      <div class="sec-label">
+        <span class="sec-count">01</span>
+        <h2>The Two Questions Every Router Must Answer</h2>
+      </div>
+      <div class="sec-line"></div>
+    </div>
+
+    <p>When a router receives a Type-5 LSA, it must answer two independent questions.</p>
+
+    <p><strong>Question 1: Where is the external network?</strong> This is answered by the Type-5 LSA itself.</p>
+
+    <div class="snippet">
+      <div class="snip-label">Type-5 LSA contents (simplified)</div>
+      <pre><span class="kw">Network:</span> <span class="num">10.10.10.0/24</span>
+<span class="kw">Metric:</span>  <span class="num">20</span>
+<span class="kw">Type:</span>    E2</pre>
+      <button class="copy-btn">Copy</button>
+    </div>
+
+    <p>The router now knows that 10.10.10.0/24 exists outside the OSPF domain. But it still doesn't know where to send packets.</p>
+
+    <p><strong>Question 2: How do I reach the ASBR that advertised it?</strong> This is answered by a different set of LSAs:</p>
+    <ul>
+      <li><strong>Type-1/2 LSAs</strong> when the ASBR is in the router's own area</li>
+      <li><strong>Type-4 LSAs</strong> when the ASBR is in a remote area</li>
+    </ul>
+
+    <p>This is where intra-area and inter-area concepts enter the picture.</p>
+
+    <!-- Section 2 -->
+    <div class="sec-head">
+      <div class="sec-label">
+        <span class="sec-count">02</span>
+        <h2>Scenario 1: ASBR in the Same Area</h2>
+      </div>
+      <div class="sec-line"></div>
+    </div>
+
+    <div class="snippet">
+      <div class="snip-label">Topology</div>
+      <pre>          Area 0
+
+     R1 -------- ASBR
+                    |
+              10.10.10.0/24</pre>
+      <button class="copy-btn">Copy</button>
+    </div>
+
+    <p>The ASBR redistributes a route and originates a Type-5 LSA:</p>
+
+    <div class="snippet">
+      <div class="snip-label">ASBR</div>
+      <pre><span class="kw">router</span> ospf 1
+ <span class="kw">redistribute</span> static</pre>
+      <button class="copy-btn">Copy</button>
+    </div>
+
+    <p>R1 receives two kinds of information:</p>
+    <ul>
+      <li><strong>Type-1 (Router) LSAs:</strong> R1 learns the ASBR's position through its normal SPF calculation. The ASBR sets the E-bit in its own Router LSA, which marks it as an ASBR.</li>
+      <li><strong>Type-5 LSA:</strong> the ASBR advertises 10.10.10.0/24 as an external route.</li>
+    </ul>
+
+    <div class="highlight">
+      <p><strong>Type-1/2</strong> &rarr; find the ASBR</p>
+      <p><strong>Type-5</strong> &rarr; find the external network</p>
+    </div>
+
+    <p>R1 knows where the ASBR is and knows the external route exists, so it can install the route. This is an <strong>external destination reached over an intra-area path to the ASBR</strong>.</p>
+
+    <!-- Section 3 -->
+    <div class="sec-head">
+      <div class="sec-label">
+        <span class="sec-count">03</span>
+        <h2>Scenario 2: ASBR in Another Area</h2>
+      </div>
+      <div class="sec-line"></div>
+    </div>
+
+    <div class="snippet">
+      <div class="snip-label">Topology</div>
+      <pre>Area 0                     Area 1
+
+R1 -------- ABR -------- ASBR
+                           |
+                     10.10.10.0/24</pre>
+      <button class="copy-btn">Copy</button>
+    </div>
+
+    <p>Now the ASBR is no longer inside R1's area. Can R1 see Area 1's Type-1 LSAs? <strong>No.</strong> Each area has its own link-state database, and Type-1 and Type-2 LSAs never leave their area. R1 has no way to learn directly that the ASBR exists.</p>
+
+    <p>The Type-5 LSA, on the other hand, <em>is</em> flooded across the whole OSPF domain (except stub and NSSA areas). So R1 knows 10.10.10.0/24 exists, but has no path to the router that originated it.</p>
+
+    <h3>The solution: the Type-4 LSA</h3>
+
+    <p>The ABR generates a <strong>Type-4 Summary ASBR LSA</strong>, which tells the other areas: <em>"The ASBR is reachable through me, at this cost."</em></p>
+
+    <div class="callout tip">
+      <strong>CCIE Tip:</strong> A Type-4 LSA does <em>not</em> advertise networks. It advertises a single router: the ASBR, identified by its router ID. Each ABR regenerates it at every area boundary it crosses.
+    </div>
+
+    <div class="highlight">
+      <p><strong>Type-4</strong> &rarr; reach the ASBR (via the ABR)</p>
+      <p><strong>Type-5</strong> &rarr; reach the external prefix</p>
+    </div>
+
+    <p>Combining the two, R1 can install the external route.</p>
+
+    <!-- Section 4 -->
+    <div class="sec-head">
+      <div class="sec-label">
+        <span class="sec-count">04</span>
+        <h2>The Critical Relationship</h2>
+      </div>
+      <div class="sec-line"></div>
+    </div>
+
+    <p>Many engineers memorize LSA types individually. A better way is to see the dependency:</p>
+    <ul>
+      <li><strong>Type-5 needs an ASBR.</strong></li>
+      <li><strong>Type-4 tells you where the ASBR is.</strong></li>
+    </ul>
+
+    <div class="callout">
+      <strong>Therefore:</strong> Type-4 LSAs exist to support Type-5 LSAs across areas. Without them, routers in other areas would know an external network exists but could not reach the ASBR that originated it.
+    </div>
+
+    <h3>What about the path to the ABR?</h3>
+
+    <p>A common follow-up question is whether Type-3 LSAs are involved. They are not, at least not for reaching routers. Type-3 LSAs carry <em>networks</em>, not routers. R1 reaches the ABR the same way it reaches any router in its own area: through the Type-1/2 LSAs and SPF. The complete chain looks like this:</p>
+
+    <div class="highlight">
+      <p><strong>Type-1/2</strong> &rarr; reach the ABR (it sits in R1's own area)</p>
+      <p><strong>Type-4</strong> &rarr; reach the ASBR behind the ABR</p>
+      <p><strong>Type-5</strong> &rarr; reach the external network behind the ASBR</p>
+    </div>
+
+    <p>The total cost to the ASBR is R1's intra-area cost to the ABR plus the cost the ABR advertises in the Type-4 LSA.</p>
+
+    <!-- Section 5 -->
+    <div class="sec-head">
+      <div class="sec-label">
+        <span class="sec-count">05</span>
+        <h2>The Simplest Way to Remember It</h2>
+      </div>
+      <div class="sec-line"></div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>ASBR location</th>
+          <th>Path to ASBR</th>
+          <th>Destination</th>
+          <th>Result</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Same area</strong></td>
+          <td>Type-1/2</td>
+          <td>Type-5</td>
+          <td>External route reached over the intra-area topology</td>
+        </tr>
+        <tr>
+          <td><strong>Remote area</strong></td>
+          <td>Type-1/2 to the ABR, then Type-4 to the ASBR</td>
+          <td>Type-5</td>
+          <td>External route reached over the inter-area topology</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Section 6 -->
+    <div class="sec-head">
+      <div class="sec-label">
+        <span class="sec-count">06</span>
+        <h2>E1 vs E2, and Why the Path Matters</h2>
+      </div>
+      <div class="sec-line"></div>
+    </div>
+
+    <p>OSPF external routes come in two flavors.</p>
+
+    <div class="stat-row">
+      <div class="stat-box">
+        <div class="stat-label">O E2 (default)</div>
+        <div class="stat-num">EXT ONLY</div>
+        <p>The route's metric is the external metric the ASBR advertised. The internal cost to the ASBR (the <em>forward metric</em>) is used only to break ties.</p>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">O E1</div>
+        <div class="stat-num">INT + EXT</div>
+        <p>The route's metric is the cost to the ASBR plus the external metric. Here the intra-area or inter-area path directly changes the result.</p>
+      </div>
+    </div>
+
+    <p>Example: two ASBRs both advertise 10.10.10.0/24 with metric 20. The cost to ASBR-A is 10; the cost to ASBR-B is 50.</p>
+
+    <div class="snippet">
+      <div class="snip-label">E1 path selection</div>
+      <pre>Via ASBR-A = <span class="num">10</span> + <span class="num">20</span> = <span class="num">30</span>   <span class="kw">&lt;-- wins</span>
+Via ASBR-B = <span class="num">50</span> + <span class="num">20</span> = <span class="num">70</span></pre>
+      <button class="copy-btn">Copy</button>
+    </div>
+
+    <p>With E2, both paths would show metric 20, and the router would break the tie on the forward metric, so ASBR-A still wins, but for a different reason.</p>
+
+    <div class="callout warn">
+      <strong>Order of preference:</strong> for the same prefix, OSPF always prefers E1 over E2, whatever the metrics. Path type is compared before cost: intra-area &gt; inter-area &gt; E1 &gt; E2.
+    </div>
+
+    <div class="snippet">
+      <div class="snip-label">Set the metric type at the ASBR</div>
+      <pre><span class="kw">router</span> ospf 1
+ <span class="kw">redistribute</span> static <span class="kw">metric</span> <span class="num">20</span> <span class="kw">metric-type</span> <span class="num">1</span></pre>
+      <button class="copy-btn">Copy</button>
+    </div>
+
+    <!-- Section 7 -->
+    <div class="sec-head">
+      <div class="sec-label">
+        <span class="sec-count">07</span>
+        <h2>What Happens Internally</h2>
+      </div>
+      <div class="sec-line"></div>
+    </div>
+
+    <p>When a router processes a Type-5 LSA:</p>
+    <ol>
+      <li><strong>Find the originating ASBR</strong> (the LSA's Advertising Router field).</li>
+      <li><strong>Determine reachability to that ASBR:</strong> if it is in the local area, use the Type-1/2 SPF result; if it is remote, use the Type-4 information.</li>
+      <li><strong>Apply the external information</strong> from the Type-5: prefix, metric, and E1 or E2.</li>
+      <li><strong>Install the route.</strong> If the ASBR is unreachable, the Type-5 stays in the database but no route is installed.</li>
+    </ol>
+
+    <div class="callout tip">
+      <strong>CCIE Tip: the forwarding address.</strong> If the Type-5 LSA carries a non-zero forwarding address, the router resolves the path to <em>that address</em> instead of to the ASBR, and the address must be reachable as an intra-area or inter-area OSPF route. This lets traffic bypass the ASBR when the real next hop sits on a shared segment. With a forwarding address of 0.0.0.0, the router uses the path to the ASBR as described above.
+    </div>
+
+    <!-- Section 8 -->
+    <div class="sec-head">
+      <div class="sec-label">
+        <span class="sec-count">08</span>
+        <h2>Where Area Types Change the Picture</h2>
+      </div>
+      <div class="sec-line"></div>
+    </div>
+
+    <p>As covered in <a href="/ccie-ospf/ospf-area-types-and-hierarchy.html">Chapter 01</a>, area types filter these LSAs:</p>
+    <ul>
+      <li><strong>Stub and totally stubby areas</strong> block Type-4 and Type-5 LSAs entirely. Routers inside reach external destinations through a default route from the ABR.</li>
+      <li><strong>NSSA</strong> lets an ASBR inside the area redistribute routes as <strong>Type-7</strong> LSAs. The ABR translates them into Type-5 LSAs for the rest of the domain, and from then on the translating ABR acts as the ASBR for those routes.</li>
+    </ul>
+
+    <!-- Section 9 -->
+    <div class="sec-head">
+      <div class="sec-label">
+        <span class="sec-count">09</span>
+        <h2>The Golden Rule</h2>
+      </div>
+      <div class="sec-line"></div>
+    </div>
+
+    <div class="callout">
+      <strong>A Type-5 LSA describes the destination, not the path.</strong> The path always comes from somewhere else.
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Scenario</th>
+          <th>Path</th>
+          <th>Destination</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Same area</strong></td>
+          <td>Type-1/2</td>
+          <td>Type-5</td>
+        </tr>
+        <tr>
+          <td><strong>Different area</strong></td>
+          <td>Type-1/2 to ABR &rarr; Type-4 to ASBR</td>
+          <td>Type-5</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>That single distinction explains why an external route can be reached over either an intra-area or an inter-area path, while still being, fundamentally, a Type-5 external route.</p>
+
+    <div class="callout tip">
+      <ul>
+        <li><strong>"Type-5 says what exists; Type-1/2 or Type-4 says how to get to whoever said it."</strong></li>
+        <li><strong>"Type-4 LSAs exist so Type-5 LSAs work across area boundaries."</strong></li>
+        <li><strong>"E2 ignores the internal path except as a tie-breaker; E1 adds it to the metric."</strong></li>
+      </ul>
+    </div>
+
+    <p style="margin-top: 3rem; text-align: center;">
+      <a href="/ccie-ospf/">&larr; Back to Overview</a>
+    </p>
+
+  </main>
+
+  <footer class="site">
+    <p>&copy; 2026 Ioannis Konstas &middot; <a href="https://github.com/ikonstas70">github.com/ikonstas70</a></p>
+  </footer>
+</div>
+
+<script>
+document.querySelectorAll('.copy-btn').forEach(b=>{b.addEventListener('click',()=>{const pre=b.closest('.snippet').querySelector('pre');const t=pre.innerText;navigator.clipboard.writeText(t).then(()=>{b.textContent='Copied';setTimeout(()=>b.textContent='Copy',1400)})})});
+</script>
+</body>
+</html>

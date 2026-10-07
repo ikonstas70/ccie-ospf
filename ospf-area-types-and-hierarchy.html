@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="canonical" href="https://ikonstas70.github.io/ccie-ospf/ospf-area-types-and-hierarchy.html">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OSPF Area Types &amp; Hierarchy | Mastering OSPF</title>
+<meta name="description" content="Normal, stub, totally stubby and NSSA areas; ABR and ASBR roles; and which LSAs each area type filters out.">
+<meta name="author" content="Ioannis Alexander Konstas">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Mastering OSPF">
+<meta property="og:title" content="OSPF Area Types &amp; Hierarchy">
+<meta property="og:description" content="Normal, stub, totally stubby and NSSA areas; ABR and ASBR roles; and which LSAs each area type filters out.">
+<meta property="og:url" content="https://ikonstas70.github.io/ccie-ospf/ospf-area-types-and-hierarchy.html">
+<meta property="og:image" content="https://ikonstas70.github.io/ccie-ospf/ospf-og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="OSPF Area Types &amp; Hierarchy">
+<meta name="twitter:description" content="Normal, stub, totally stubby and NSSA areas; ABR and ASBR roles; and which LSAs each area type filters out.">
+<meta name="twitter:image" content="https://ikonstas70.github.io/ccie-ospf/ospf-og.jpg">
+<link rel="stylesheet" href="/ccie-ospf/style.css">
+<!-- Any page-specific styles in a <style> block -->
+<style>
+  .decision-tree {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 2rem;
+    font-family: 'Inter', sans-serif;
+  }
+  .tree-node {
+    padding: 1rem;
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    margin: 1rem 0;
+    text-align: center;
+    background: rgba(212, 175, 55, 0.1);
+  }
+  .tree-branch {
+    display: flex;
+    justify-content: space-around;
+    position: relative;
+  }
+  .tree-branch::before {
+    content: '';
+    position: absolute;
+    top: -1rem;
+    left: 25%;
+    right: 25%;
+    height: 1px;
+    background: var(--border);
+  }
+  .tree-item {
+    width: 45%;
+    text-align: center;
+  }
+  .tree-label {
+    background: var(--bg);
+    padding: 0.2rem 0.5rem;
+    font-size: 0.85rem;
+    color: var(--accent);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    position: relative;
+    top: -1.8rem;
+    display: inline-block;
+  }
+</style>
+<!-- Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-BZK50T0JFT"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag("js",new Date());gtag("config","G-BZK50T0JFT");</script>
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <a class="brand" href="/ccie-ospf/">Mastering OSPF<em>.</em></a>
+    <div class="tagline">Chapter 01 &middot; Link-State Routing &middot; CCIE</div>
+    <div class="rule"></div>
+    <nav class="top">
+      <a href="/ccie-ospf/">Series</a>
+      <a href="/ccie-ospf/ospf-area-types-and-hierarchy.html" class="active">Areas</a>
+      <a href="/ccie-ospf/ospf-vs-bgp-summarization.html">Summarization</a>
+      <a href="/ccie-ospf/dmvpn-gre-mgre-nhrp.html">DMVPN</a>
+      <a href="/ccie-ospf/ospf-type5-lsa-external-reachability.html">Type-5 LSAs</a>
+      <a href="https://ikonstas70.github.io/">Home &#8593;</a>
+    </nav>
+  </header>
+
+  <main>
+    <img class="hero-banner" src="/ccie-ospf/hero-chip.jpg" alt="Macro photograph of an integrated circuit die">
+    
+    <div class="tags" style="margin-top: 1rem;">
+      <span class="tag">CCIE</span>
+      <span class="tag">OSPF</span>
+      <span class="tag">LSA</span>
+      <span class="tag">Areas</span>
+    </div>
+
+    <h1>OSPF Area Types & Hierarchy</h1>
+    <p class="meta">By Ioannis Alexander Konstas</p>
+    
+    <p class="section-intro">Mastering OSPF area types is critical for the CCIE lab. It directly impacts your ability to perform LSA filtering, summarize routes, and optimize the routing domain. This article breaks down the rules, configuration, and design principles of OSPF areas.</p>
+
+    <div class="sec-head">
+      <div class="sec-label">Section 1</div>
+      <div class="sec-line"></div>
+      <div class="sec-count">01</div>
+    </div>
+    <h2>1. OSPF Router Roles</h2>
+    <p>Before diving into area types, we must define the functional roles a router can play within an OSPF domain.</p>
+    <ul>
+      <li><strong>Internal Router:</strong> All of its interfaces belong to the same OSPF area. It only maintains a link-state database (LSDB) for that specific area.</li>
+      <li><strong>ABR (Area Border Router):</strong> A router that has interfaces in multiple OSPF areas (one of which must be Area 0, the backbone). It maintains a separate LSDB for each area it connects to and acts as the gateway for exchanging inter-area routing information (generating Type 3 LSAs).</li>
+      <li><strong>ASBR (Autonomous System Boundary Router):</strong> A router that redistributes routes from an external routing protocol (Static, BGP, EIGRP, RIP) into the OSPF domain (generating Type 5 or Type 7 LSAs).</li>
+    </ul>
+
+    <div class="sec-head">
+      <div class="sec-label">Section 2</div>
+      <div class="sec-line"></div>
+      <div class="sec-count">02</div>
+    </div>
+    <h2>2. Normal (Non-Stub) Area</h2>
+    <p>A normal area, which includes the backbone area (Area 0), imposes no restrictions on LSAs.</p>
+    <ul>
+      <li><strong>Accepts ALL LSA types:</strong> Type 1 (Router), Type 2 (Network), Type 3 (Summary), Type 4 (ASBR Summary), and Type 5 (External).</li>
+      <li>Provides full visibility of intra-area, inter-area, and external routes.</li>
+      <li><strong>Think:</strong> "Give me everything."</li>
+    </ul>
+
+    <div class="sec-head">
+      <div class="sec-label">Section 3</div>
+      <div class="sec-line"></div>
+      <div class="sec-count">03</div>
+    </div>
+    <h2>3. Stub Area</h2>
+    <p>A stub area is designed to reduce the size of the routing table by blocking external routes.</p>
+    <ul>
+      <li>Blocks <strong>Type 4 and Type 5 LSAs</strong>.</li>
+      <li>The ABR injects a default route (0.0.0.0/0) into the stub area using a Type 3 LSA, allowing internal routers to reach external destinations.</li>
+      <li>Still receives Type 1, 2, and 3 LSAs (inter-area routes).</li>
+      <li><strong>CANNOT contain an ASBR.</strong> This is the golden rule of stub areas.</li>
+      <li><strong>Think:</strong> "Don't send me external routes."</li>
+    </ul>
+    
+    <div class="snippet">
+      <div class="snip-label">Stub Area Configuration (Must be on all routers in Area 1)</div>
+      <pre>
+router ospf 1
+ area 1 stub
+</pre>
+      <button class="copy-btn">Copy</button>
+    </div>
+
+    <div class="sec-head">
+      <div class="sec-label">Section 4</div>
+      <div class="sec-line"></div>
+      <div class="sec-count">04</div>
+    </div>
+    <h2>4. Totally Stubby Area</h2>
+    <p>A Cisco-proprietary extension to the standard Stub area that further reduces LSDB and routing table size.</p>
+    <ul>
+      <li>Blocks <strong>Type 3, 4, and 5 LSAs</strong> (except for the default route).</li>
+      <li>Only receives Type 1, 2, plus the default route (Type 3) injected by the ABR.</li>
+      <li>Produces the smallest possible routing table for internal routers.</li>
+      <li><strong>Think:</strong> "Just give me a default route."</li>
+    </ul>
+
+    <div class="snippet">
+      <div class="snip-label">Totally Stubby ABR Configuration</div>
+      <pre>
+router ospf 1
+ area 1 stub no-summary
+</pre>
+      <button class="copy-btn">Copy</button>
+    </div>
+    
+    <div class="callout tip">
+      <strong>Exam Tip:</strong> You only need to configure <code>no-summary</code> on the ABR(s). Internal routers still just use the standard <code>area 1 stub</code> command. The ABR takes care of filtering the Type 3 LSAs.
+    </div>
+
+    <div class="sec-head">
+      <div class="sec-label">Section 5</div>
+      <div class="sec-line"></div>
+      <div class="sec-count">05</div>
+    </div>
+    <h2>5. NSSA (Not-So-Stubby Area)</h2>
+    <p>Introduced to overcome the "No ASBR in a Stub area" rule.</p>
+    <ul>
+      <li>Used when you need stub behavior (blocking incoming external routes) BUT you also have an ASBR inside the area that needs to redistribute local external routes.</li>
+      <li>Blocks incoming <strong>Type 5 LSAs</strong> from the rest of the OSPF domain.</li>
+      <li>Allows redistribution inside the area by creating a special <strong>Type 7 LSA</strong>.</li>
+      <li>The NSSA ABR translates Type 7 LSAs into Type 5 LSAs when advertising them into Area 0.</li>
+      <li><strong>Think:</strong> "I want stub behavior but I still need redistribution."</li>
+    </ul>
+
+    <div class="snippet">
+      <div class="snip-label">NSSA Configuration</div>
+      <pre>
+router ospf 1
+ area 1 nssa
+</pre>
+      <button class="copy-btn">Copy</button>
+    </div>
+
+    <div class="sec-head">
+      <div class="sec-label">Section 6</div>
+      <div class="sec-line"></div>
+      <div class="sec-count">06</div>
+    </div>
+    <h2>6. Totally NSSA</h2>
+    <p>Combines NSSA and Totally Stubby features. This is the most restrictive area type that still permits local redistribution.</p>
+    <ul>
+      <li>Allows Type 1, 2, local Type 7, and a default route (Type 3).</li>
+      <li>Blocks incoming <strong>Type 3, 4, and 5 LSAs</strong>.</li>
+      <li>Configured on the ABR with <code>area 1 nssa no-summary</code>.</li>
+      <li><strong>Think:</strong> "Stub + NSSA combined."</li>
+    </ul>
+
+    <div class="sec-head">
+      <div class="sec-label">Section 7</div>
+      <div class="sec-line"></div>
+      <div class="sec-count">07</div>
+    </div>
+    <h2>7. The Golden Rule</h2>
+    <div class="highlight" style="padding: 1.5rem; background: var(--card); border-left: 4px solid var(--accent);">
+      <h3>"Is there an ASBR inside the area?"</h3>
+      <ul>
+        <li><strong>Yes &rarr;</strong> Cannot be Stub or Totally Stubby. You MUST use Normal or NSSA.</li>
+        <li><strong>No &rarr;</strong> Stub or Totally Stubby is possible.</li>
+      </ul>
+      <p>A stub area is NOT determined by topology alone — it MUST be explicitly configured. OSPF hello packets include an options field that indicates stub area capability; routers will not form adjacencies if they disagree on the stub flag.</p>
+    </div>
+
+    <div class="sec-head">
+      <div class="sec-label">Section 8</div>
+      <div class="sec-line"></div>
+      <div class="sec-count">08</div>
+    </div>
+    <h2>8. Common Misconception</h2>
+    <div class="callout warn">
+      <strong>Misconception:</strong> Many network engineers think that any remote site area connected via a single ABR to Area 0 (without an ASBR) is automatically acting as a stub area.
+      <br><br>
+      <strong>Truth:</strong> This is FALSE. Regardless of topology, unless explicitly configured with <code>area X stub</code>, the area remains a Normal area, and the ABR will flood all Type 3, 4, and 5 LSAs into it, wasting memory and CPU cycles on those remote routers.
+    </div>
+
+    <div class="sec-head">
+      <div class="sec-label">Section 9</div>
+      <div class="sec-line"></div>
+      <div class="sec-count">09</div>
+    </div>
+    <h2>9. Decision Tree</h2>
+    <div class="decision-tree">
+      <div class="tree-node" style="margin-left: 25%; margin-right: 25%;">
+        <strong>Does area contain an ASBR?</strong>
+      </div>
+      <div class="tree-branch">
+        <div class="tree-item">
+          <div class="tree-label">Yes</div>
+          <div class="tree-node"><strong>Normal or NSSA</strong></div>
+        </div>
+        <div class="tree-item">
+          <div class="tree-label">No</div>
+          <div class="tree-node">
+            <strong>Want external routes?</strong>
+          </div>
+          <div class="tree-branch" style="margin-top: 1rem;">
+            <div class="tree-item" style="width: 50%;">
+              <div class="tree-label" style="top: -1rem;">Yes</div>
+              <div class="tree-node" style="padding: 0.5rem; font-size: 0.9rem;">Normal</div>
+            </div>
+            <div class="tree-item" style="width: 50%;">
+              <div class="tree-label" style="top: -1rem;">No</div>
+              <div class="tree-node" style="padding: 0.5rem; font-size: 0.9rem;">Stub or<br>Totally Stubby</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sec-head">
+      <div class="sec-label">Section 10</div>
+      <div class="sec-line"></div>
+      <div class="sec-count">10</div>
+    </div>
+    <h2>10. Comprehensive Comparison Table</h2>
+    <div style="overflow-x: auto;">
+      <table style="width: 100%; text-align: left; border-collapse: collapse; margin: 1rem 0;">
+        <thead>
+          <tr style="border-bottom: 1px solid var(--border);">
+            <th style="padding: 0.75rem;">Area Type</th>
+            <th style="padding: 0.75rem;">Type 1,2</th>
+            <th style="padding: 0.75rem;">Type 3</th>
+            <th style="padding: 0.75rem;">Type 4</th>
+            <th style="padding: 0.75rem;">Type 5</th>
+            <th style="padding: 0.75rem;">Type 7</th>
+            <th style="padding: 0.75rem;">ASBR Allowed</th>
+            <th style="padding: 0.75rem;">Default Route</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom: 1px solid var(--border); background: var(--bg);">
+            <td style="padding: 0.75rem; font-weight: bold;">Normal</td>
+            <td style="padding: 0.75rem; color: #4ade80;">Yes</td>
+            <td style="padding: 0.75rem; color: #4ade80;">Yes</td>
+            <td style="padding: 0.75rem; color: #4ade80;">Yes</td>
+            <td style="padding: 0.75rem; color: #4ade80;">Yes</td>
+            <td style="padding: 0.75rem; color: #f87171;">No</td>
+            <td style="padding: 0.75rem; color: #4ade80;">Yes</td>
+            <td style="padding: 0.75rem;">Manual Config</td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--border); background: var(--card);">
+            <td style="padding: 0.75rem; font-weight: bold;">Stub</td>
+            <td style="padding: 0.75rem; color: #4ade80;">Yes</td>
+            <td style="padding: 0.75rem; color: #4ade80;">Yes</td>
+            <td style="padding: 0.75rem; color: #f87171;">No</td>
+            <td style="padding: 0.75rem; color: #f87171;">No</td>
+            <td style="padding: 0.75rem; color: #f87171;">No</td>
+            <td style="padding: 0.75rem; color: #f87171;">No</td>
+            <td style="padding: 0.75rem; color: #4ade80;">Injected by ABR</td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--border); background: var(--bg);">
+            <td style="padding: 0.75rem; font-weight: bold;">Totally Stubby</td>
+            <td style="padding: 0.75rem; color: #4ade80;">Yes</td>
+            <td style="padding: 0.75rem; color: #f87171;">No*</td>
+            <td style="padding: 0.75rem; color: #f87171;">No</td>
+            <td style="padding: 0.75rem; color: #f87171;">No</td>
+            <td style="padding: 0.75rem; color: #f87171;">No</td>
+            <td style="padding: 0.75rem; color: #f87171;">No</td>
+            <td style="padding: 0.75rem; color: #4ade80;">Injected by ABR</td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--border); background: var(--card);">
+            <td style="padding: 0.75rem; font-weight: bold;">NSSA</td>
+            <td style="padding: 0.75rem; color: #4ade80;">Yes</td>
+            <td style="padding: 0.75rem; color: #4ade80;">Yes</td>
+            <td style="padding: 0.75rem; color: #f87171;">No</td>
+            <td style="padding: 0.75rem; color: #f87171;">No</td>
+            <td style="padding: 0.75rem; color: #4ade80;">Yes</td>
+            <td style="padding: 0.75rem; color: #4ade80;">Yes</td>
+            <td style="padding: 0.75rem;">Optional Config</td>
+          </tr>
+          <tr style="background: var(--bg);">
+            <td style="padding: 0.75rem; font-weight: bold;">Totally NSSA</td>
+            <td style="padding: 0.75rem; color: #4ade80;">Yes</td>
+            <td style="padding: 0.75rem; color: #f87171;">No*</td>
+            <td style="padding: 0.75rem; color: #f87171;">No</td>
+            <td style="padding: 0.75rem; color: #f87171;">No</td>
+            <td style="padding: 0.75rem; color: #4ade80;">Yes</td>
+            <td style="padding: 0.75rem; color: #4ade80;">Yes</td>
+            <td style="padding: 0.75rem; color: #4ade80;">Injected by ABR</td>
+          </tr>
+        </tbody>
+      </table>
+      <p style="font-size: 0.85rem; color: #9ca3af;">* Only a single Type 3 LSA is allowed, which carries the default route (0.0.0.0/0).</p>
+    </div>
+
+    <div class="sec-head">
+      <div class="sec-label">Section 11</div>
+      <div class="sec-line"></div>
+      <div class="sec-count">11</div>
+    </div>
+    <h2>11. LSA Quick Reference</h2>
+    <ul>
+      <li><strong>Type 1: Router LSA</strong> &mdash; Generated by all routers for their interfaces in a specific area.</li>
+      <li><strong>Type 2: Network LSA</strong> &mdash; Generated by the DR on multi-access networks.</li>
+      <li><strong>Type 3: Summary LSA</strong> &mdash; Generated by ABRs to advertise inter-area routes.</li>
+      <li><strong>Type 4: ASBR Summary LSA</strong> &mdash; Generated by ABRs to provide reachability to an ASBR in another area.</li>
+      <li><strong>Type 5: External LSA</strong> &mdash; Generated by ASBRs for routes redistributed into OSPF. Flooded domain-wide.</li>
+      <li><strong>Type 7: NSSA External LSA</strong> &mdash; Generated by ASBRs inside an NSSA. Converted to Type 5 by the NSSA ABR.</li>
+    </ul>
+
+    <div class="sec-head">
+      <div class="sec-label">Section 12</div>
+      <div class="sec-line"></div>
+      <div class="sec-count">12</div>
+    </div>
+    <h2>12. Memory Tricks</h2>
+    <div class="callout tip">
+      <ul style="margin: 0; padding-left: 1rem;">
+        <li><strong>Progressive restriction:</strong> Normal &rarr; Stub &rarr; Totally Stubby</li>
+        <li><strong>NSSA</strong> = A Stub that can redistribute locally.</li>
+        <li><strong>Mantra:</strong> "Normal = Everything, Stub = No externals, Totally Stubby = Only default, NSSA = Stub with ASBR"</li>
+      </ul>
+    </div>
+
+    <p style="margin-top: 3rem;"><a href="/ccie-ospf/">&larr; Back to Overview</a></p>
+  </main>
+
+  <footer class="site">
+    <p>&copy; 2026 Ioannis Konstas &middot; <a href="https://github.com/ikonstas70">github.com/ikonstas70</a></p>
+  </footer>
+</div>
+
+<script>
+document.querySelectorAll('.copy-btn').forEach(b=>{b.addEventListener('click',()=>{const pre=b.closest('.snippet').querySelector('pre');const t=pre.innerText;navigator.clipboard.writeText(t).then(()=>{b.textContent='Copied';setTimeout(()=>b.textContent='Copy',1400)})})});
+</script>
+</body>
+</html>
