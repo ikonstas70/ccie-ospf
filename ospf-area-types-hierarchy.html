@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="canonical" href="https://ikonstas70.github.io/ccie-ospf/ospf-area-types-hierarchy.html">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OSPF Area Types &amp; Hierarchy | CCIE Routing Study Reference</title>
+<meta name="description" content="A practical guide to OSPF Normal, Stub, Totally Stubby, and NSSA areas, the ABR/ASBR role split, and the exam rule for whether an area can contain an ASBR.">
+<meta name="author" content="Ioannis Alexander Konstas">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://ikonstas70.github.io/ccie-ospf/ospf-area-types-hierarchy.html">
+<meta property="og:title" content="OSPF Area Types &amp; Hierarchy">
+<meta property="og:description" content="Stub, Totally Stubby, NSSA, ABRs and ASBRs — a practical guide to OSPF area design and the exam rules behind it.">
+<meta property="og:site_name" content="CCIE OSPF Study Reference">
+<meta name="twitter:card" content="summary">
+
+<link rel="stylesheet" href="/ccie-ospf/style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <a class="brand" href="/ccie-ospf/">CCIE Routing<em>.</em></a>
+    <div class="tagline">OSPF &middot; DMVPN &middot; BGP &middot; Study Reference</div>
+    <div class="rule"></div>
+    <nav class="top">
+      <a href="/ccie-ospf/">Overview</a>
+      <a href="/ccie-ospf/dmvpn-gre-mgre-nhrp.html">DMVPN</a>
+      <a href="/ccie-ospf/ospf-area-types-hierarchy.html" class="active">OSPF Areas</a>
+      <a href="/ccie-ospf/ospf-bgp-summarization.html">OSPF vs BGP</a>
+      <a href="https://ikonstas70.github.io/information-security/">Information Security ↗</a>
+      <a href="https://ikonstas70.github.io/">Konstas.Engineering Notes &#8593;</a>
+    </nav>
+  </header>
+
+  <main>
+    <h1>OSPF Area Types &amp; Hierarchy</h1>
+    <p class="header-sub">Stub areas, Totally Stubby areas, and NSSA all exist to answer one question: how much of the outside world does this area actually need to see? The rule that decides it isn't topology — it's configuration, plus one hard constraint on ASBRs.</p>
+    <div class="header-meta">CCIE Enterprise Infrastructure &middot; OSPF / Area Design</div>
+    <div class="header-tags">
+      <span class="htag">ABR</span>
+      <span class="htag">ASBR</span>
+      <span class="htag">Stub Area</span>
+      <span class="htag">Totally Stubby</span>
+      <span class="htag">NSSA</span>
+      <span class="htag">LSA Types 1–7</span>
+    </div>
+
+    <div class="sec-head"><span class="sec-label">Core Router Roles</span><span class="sec-line"></span></div>
+    <p><strong>Internal router</strong> — every interface belongs to the same area.</p>
+    <p><strong>ABR (Area Border Router)</strong> — sits on the boundary between two or more areas and exchanges routing information between them.</p>
+    <pre><code>Area 0 &lt;----&gt; ABR &lt;----&gt; Area 1</code></pre>
+    <p><strong>ASBR (Autonomous System Boundary Router)</strong> — redistributes routes from another source (static, BGP, EIGRP, RIP) into OSPF, generating external routes.</p>
+    <pre><code>Internet
+   |
+ ASBR
+   |
+ OSPF</code></pre>
+
+    <div class="sec-head"><span class="sec-label">Normal (Non-Stub) Area</span><span class="sec-line"></span></div>
+    <p>Accepts every LSA type that's valid for OSPF — intra-area (Type 1/2), inter-area (Type 3/4), and external (Type 5). Nothing is filtered. Think: <em>"give me everything."</em></p>
+    <pre><code>         ASBR
+           |
+         Area 0
+           |
+         Area 1</code></pre>
+
+    <div class="sec-head"><span class="sec-label">Stub Area</span><span class="sec-line"></span></div>
+    <p>A stub area blocks Type 5 external LSAs and has the ABR inject a single default route (<code>0.0.0.0/0</code>) instead. Type 1, 2, and 3 LSAs still get through.</p>
+    <span class="snip-label">Configured on every router inside the area</span>
+    <pre><code>router ospf 1
+ area 1 stub</code></pre>
+    <p>Instead of carrying thousands of individual external routes, routers inside the area carry one: <code>0.0.0.0/0</code>, pointed at the ABR. Smaller LSDB, smaller routing table, less SPF work. Think: <em>"don't send me external routes."</em></p>
+
+    <div class="sec-head"><span class="sec-label">Totally Stubby Area (Cisco)</span><span class="sec-line"></span></div>
+    <p>A Cisco-proprietary tightening of Stub: it also blocks Type 3 inter-area LSAs, keeping only the default route for anything outside the area.</p>
+    <span class="snip-label">ABR</span>
+    <pre><code>area 1 stub no-summary</code></pre>
+    <span class="snip-label">Internal routers</span>
+    <pre><code>area 1 stub</code></pre>
+    <p>Allowed: Type 1, 2, plus the injected default. Blocked: Type 3, 4, 5 (except the default route itself). This produces the smallest possible routing table. Think: <em>"just give me a default route."</em></p>
+
+    <div class="sec-head"><span class="sec-label">Can a Stub Area Contain an ASBR?</span><span class="sec-line"></span></div>
+    <div class="callout warn">
+      <p><strong>No — and this is the single most important rule in this topic.</strong> An ASBR generates external routes, which become Type 5 LSAs. Stub areas exist specifically to block Type 5 LSAs. The two requirements directly conflict, so Cisco simply does not allow an ASBR inside a configured stub area.</p>
+    </div>
+    <pre><code>Area 0
+   |
+  ABR
+   |
+Stub Area
+   |
+ ASBR        &larr; not valid</code></pre>
+
+    <div class="sec-head"><span class="sec-label">NSSA — Not-So-Stubby Area</span><span class="sec-line"></span></div>
+    <p>NSSA exists for exactly the case Stub can't handle: you want stub-like behavior, but the area still needs to redistribute routes locally through its own ASBR.</p>
+    <pre><code>Area 0
+   |
+  ABR
+   |
+ NSSA
+   |
+ ASBR</code></pre>
+    <span class="snip-label">Configuration</span>
+    <pre><code>router ospf 1
+ area 1 nssa</code></pre>
+    <p>Inside the NSSA, the ASBR's redistributed routes are carried as <strong>Type 7</strong> LSAs rather than Type 5. The ABR translates <code>Type 7 → Type 5</code> only when advertising them onward into the rest of the OSPF domain. Allowed inside the NSSA: Type 1, 2, 3, 7. Blocked: incoming Type 5 from outside. Think: <em>"mostly stub, but I still need redistribution."</em></p>
+    <p>A Cisco enhancement, <strong>Totally NSSA</strong>, combines this with the Totally Stubby restriction: it can still originate Type 7 externals locally, but receives only a default route for everything outside, with Type 3/4/5 blocked.</p>
+
+    <div class="sec-head"><span class="sec-label">The Common Misconception</span><span class="sec-line"></span></div>
+    <p>A tempting shortcut is: <em>"any area that isn't Area 0, has no ASBR, and only connects out through an ABR, is automatically a stub area."</em> That's not correct — a stub area is defined by configuration and LSA filtering, not by topology alone.</p>
+    <pre><code>Area 0 ---- ABR ---- Area 1</code></pre>
+    <p>If Area 1 has no ASBR but was never configured with <code>area 1 stub</code>, it is simply a normal area that happens to have no external routes to advertise. Nothing about its shape forces stub behavior — the command has to be there.</p>
+    <div class="callout tip">
+      <p>Corrected rule: <strong>a stub area is an area explicitly configured as stub, that does not contain an ASBR.</strong> Topology without configuration is never enough on its own.</p>
+    </div>
+    <p>One related detail worth flagging precisely: the OSPF network-type command (<code>ip ospf network point-to-point</code>) is a different, interface-level setting and isn't removed by IOS just because a neighbor also configures it — it stays in the running config on both sides, since it's a valid explicit setting rather than a derived default.</p>
+
+    <div class="sec-head"><span class="sec-label">Decision Tree</span><span class="sec-line"></span></div>
+    <pre><code>Does the area contain an ASBR?
+        |
+     +--+--+
+     |     |
+    Yes    No
+     |      |
+ Normal   Want external
+ or NSSA  routes visible?
+             |
+         +---+---+
+         |       |
+        Yes      No
+         |        |
+      Normal    Stub
+                or
+          Totally Stubby</code></pre>
+
+    <div class="sec-head"><span class="sec-label">One-Minute Comparison</span><span class="sec-line"></span></div>
+    <div class="table-wrap">
+    <table class="comparison-table">
+      <tr><th>Area Type</th><th>ASBR Allowed</th><th>External Routes</th><th>Default Route Injected</th></tr>
+      <tr><td>Normal</td><td class="yes">Yes</td><td class="yes">Yes</td><td>Optional</td></tr>
+      <tr><td>Stub</td><td class="no">No</td><td class="no">No</td><td class="yes">Yes</td></tr>
+      <tr><td>Totally Stubby</td><td class="no">No</td><td class="no">No</td><td class="yes">Yes</td></tr>
+      <tr><td>NSSA</td><td class="yes">Yes</td><td class="maybe">Type 7 only</td><td>Usually</td></tr>
+      <tr><td>Totally NSSA</td><td class="yes">Yes</td><td class="maybe">Type 7 only, originated locally</td><td class="yes">Yes</td></tr>
+    </table>
+    </div>
+
+    <div class="sec-head"><span class="sec-label">Memory Trick</span><span class="sec-line"></span></div>
+    <ul>
+      <li><strong>Normal</strong> = everything</li>
+      <li><strong>Stub</strong> = no external routes</li>
+      <li><strong>Totally Stubby</strong> = only a default route</li>
+      <li><strong>NSSA</strong> = stub with a local ASBR (Type 7 → Type 5 at the ABR)</li>
+    </ul>
+    <div class="callout insight">
+      <p><strong>Golden rule:</strong> a stub area is never determined by topology alone. It must be explicitly configured as stub, and it can never contain an ASBR — that constraint is the fastest way to rule stub/totally-stubby in or out of any diagram.</p>
+    </div>
+
+    <p><a href="/ccie-ospf/">&larr; Back to overview</a></p>
+  </main>
+
+  <footer class="site">
+    <p>&copy; 2026 Ioannis Konstas &middot; <a href="https://github.com/ikonstas70">github.com/ikonstas70</a></p>
+  </footer>
+</div>
+</body>
+</html>

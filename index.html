@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="canonical" href="https://ikonstas70.github.io/ccie-ospf/">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CCIE OSPF &amp; Routing Study Reference</title>
+<meta name="description" content="CCIE Enterprise Infrastructure study reference: OSPF area hierarchy, DMVPN (GRE/mGRE/NHRP), and OSPF vs. BGP summarization — Ioannis Alexander Konstas.">
+<meta name="author" content="Ioannis Alexander Konstas">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://ikonstas70.github.io/ccie-ospf/">
+<meta property="og:title" content="CCIE OSPF &amp; Routing Study Reference">
+<meta property="og:description" content="CCIE Enterprise Infrastructure study reference: OSPF area hierarchy, DMVPN (GRE/mGRE/NHRP), and OSPF vs. BGP summarization.">
+<meta property="og:site_name" content="CCIE OSPF Study Reference">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="CCIE OSPF &amp; Routing Study Reference">
+<meta name="twitter:description" content="OSPF area hierarchy, DMVPN (GRE/mGRE/NHRP), and OSPF vs. BGP summarization — a CCIE study reference.">
+
+<link rel="stylesheet" href="/ccie-ospf/style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <a class="brand" href="/ccie-ospf/">CCIE Routing<em>.</em></a>
+    <div class="tagline">OSPF &middot; DMVPN &middot; BGP &middot; Study Reference</div>
+    <div class="rule"></div>
+    <nav class="top">
+      <a href="/ccie-ospf/" class="active">Overview</a>
+      <a href="/ccie-ospf/dmvpn-gre-mgre-nhrp.html">DMVPN</a>
+      <a href="/ccie-ospf/ospf-area-types-hierarchy.html">OSPF Areas</a>
+      <a href="/ccie-ospf/ospf-bgp-summarization.html">OSPF vs BGP</a>
+      <a href="https://ikonstas70.github.io/information-security/">Information Security ↗</a>
+      <a href="https://ikonstas70.github.io/">Konstas.Engineering Notes &#8593;</a>
+    </nav>
+  </header>
+
+  <main>
+    <h1 style="text-align:center">CCIE Routing Study Reference</h1>
+    <p class="section-intro">Working notes from CCIE Enterprise Infrastructure lab study, rebuilt from a long Q&amp;A session into three focused reference articles: how DMVPN actually resolves spoke addresses, how OSPF's area hierarchy really contains topology (not just routes), and where OSPF's job ends and BGP's begins.</p>
+
+    <a class="card" href="/ccie-ospf/dmvpn-gre-mgre-nhrp.html">
+      <h3>DMVPN — GRE, mGRE &amp; NHRP</h3>
+      <p>Why point-to-point GRE needs a manual tunnel destination, why mGRE removes it entirely, and how NHRP acts as the overlay↔underlay translator — the ARP-for-DMVPN mental model, with hub/spoke registration examples.</p>
+      <span class="date">DMVPN &middot; Tunneling</span>
+    </a>
+
+    <a class="card" href="/ccie-ospf/ospf-area-types-hierarchy.html">
+      <h3>OSPF Area Types &amp; Hierarchy — Stub, Totally Stubby, NSSA</h3>
+      <p>A practical guide to Normal, Stub, Totally Stubby, and NSSA areas, the ABR/ASBR role split, the "can this area contain an ASBR?" exam rule, and the common misconception that topology alone makes an area a stub.</p>
+      <span class="date">OSPF &middot; Areas</span>
+    </a>
+
+    <a class="card" href="/ccie-ospf/ospf-bgp-summarization.html">
+      <h3>OSPF vs. BGP — Summarization &amp; the IGP/BGP Relationship</h3>
+      <p>NLRI and route summarization in BGP, inter-area Type-3 summarization in OSPF, why OSPF summarization hides topology while BGP summarization hides routes, and why BGP is best understood as "an application" running on top of the IGP.</p>
+      <span class="date">OSPF &middot; BGP &middot; Design</span>
+    </a>
+  </main>
+
+  <footer class="site">
+    <p>&copy; 2026 Ioannis Konstas &middot; <a href="https://github.com/ikonstas70">github.com/ikonstas70</a></p>
+  </footer>
+</div>
+</body>
+</html>

@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="canonical" href="https://ikonstas70.github.io/ccie-ospf/dmvpn-gre-mgre-nhrp.html">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DMVPN — GRE, mGRE &amp; NHRP | CCIE Routing Study Reference</title>
+<meta name="description" content="Why point-to-point GRE needs a manual tunnel destination, how mGRE removes it, and how NHRP resolves overlay tunnel addresses to underlay transport addresses in DMVPN.">
+<meta name="author" content="Ioannis Alexander Konstas">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://ikonstas70.github.io/ccie-ospf/dmvpn-gre-mgre-nhrp.html">
+<meta property="og:title" content="DMVPN — GRE, mGRE &amp; NHRP">
+<meta property="og:description" content="The overlay↔underlay translation at the heart of DMVPN: point-to-point GRE vs. mGRE, and how NHRP resolves tunnel addresses to transport addresses.">
+<meta property="og:site_name" content="CCIE OSPF Study Reference">
+<meta name="twitter:card" content="summary">
+
+<link rel="stylesheet" href="/ccie-ospf/style.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <a class="brand" href="/ccie-ospf/">CCIE Routing<em>.</em></a>
+    <div class="tagline">OSPF &middot; DMVPN &middot; BGP &middot; Study Reference</div>
+    <div class="rule"></div>
+    <nav class="top">
+      <a href="/ccie-ospf/">Overview</a>
+      <a href="/ccie-ospf/dmvpn-gre-mgre-nhrp.html" class="active">DMVPN</a>
+      <a href="/ccie-ospf/ospf-area-types-hierarchy.html">OSPF Areas</a>
+      <a href="/ccie-ospf/ospf-bgp-summarization.html">OSPF vs BGP</a>
+      <a href="https://ikonstas70.github.io/information-security/">Information Security ↗</a>
+      <a href="https://ikonstas70.github.io/">Konstas.Engineering Notes &#8593;</a>
+    </nav>
+  </header>
+
+  <main>
+    <h1>DMVPN — GRE, mGRE &amp; NHRP</h1>
+    <p class="header-sub">How a hub with a single tunnel interface reaches dozens or hundreds of spokes without ever naming their addresses in its configuration — and why that's really just an overlay↔underlay translation problem.</p>
+    <div class="header-meta">CCIE Enterprise Infrastructure &middot; DMVPN / Tunneling</div>
+    <div class="header-tags">
+      <span class="htag">GRE</span>
+      <span class="htag">mGRE</span>
+      <span class="htag">NHRP</span>
+      <span class="htag">DMVPN Phase 2/3</span>
+      <span class="htag">Overlay / Underlay</span>
+    </div>
+
+    <div class="sec-head"><span class="sec-label">Point-to-Point GRE</span><span class="sec-line"></span></div>
+    <p>A classic GRE tunnel connects exactly two endpoints, and Cisco needs to be told exactly where the far end is:</p>
+    <span class="snip-label">R1 configuration</span>
+    <pre><code>interface Tunnel0
+ tunnel source GigabitEthernet0/0
+ tunnel destination 2.2.2.2</code></pre>
+    <p>There is only one possible destination, so <code>tunnel destination</code> is mandatory. Cisco has no other way to know where the tunnel packets should go.</p>
+
+    <div class="sec-head"><span class="sec-label">The mGRE Problem</span><span class="sec-line"></span></div>
+    <p>Now put one hub in front of many spokes:</p>
+    <pre><code>              HUB
+             / | \
+            /  |  \
+          S1  S2  S3 ... S100</code></pre>
+    <p>A single tunnel interface can't carry a single <code>tunnel destination</code> — there's no one answer to "which spoke?" So Cisco removes the statement entirely and switches the interface into multipoint mode:</p>
+    <span class="snip-label">Hub configuration</span>
+    <pre><code>interface Tunnel0
+ tunnel mode gre multipoint</code></pre>
+    <p>No <code>tunnel destination</code> appears anywhere on the hub. One interface can now reach Spoke1, Spoke2, Spoke3 … Spoke100 — but only if something else tells it <em>where each spoke actually lives</em>.</p>
+
+    <div class="sec-head"><span class="sec-label">NHRP Resolves the Destinations</span><span class="sec-line"></span></div>
+    <p>That "something else" is <strong>NHRP</strong> (Next Hop Resolution Protocol). Each spoke registers its tunnel (overlay) address against its real (underlay) address with the hub:</p>
+    <div class="table-wrap">
+    <table>
+      <tr><th>Spoke</th><th>Tunnel IP (overlay)</th><th>Physical IP (underlay)</th></tr>
+      <tr><td>Spoke1</td><td>10.0.0.11</td><td>200.1.1.11</td></tr>
+      <tr><td>Spoke2</td><td>10.0.0.12</td><td>200.1.1.12</td></tr>
+      <tr><td>Spoke3</td><td>10.0.0.13</td><td>200.1.1.13</td></tr>
+    </table>
+    </div>
+    <p>The hub builds this mapping dynamically through NHRP registration — it never needs the spoke addresses typed into its configuration. That's the whole point of the three protocols working together:</p>
+    <ul>
+      <li><strong>GRE</strong> — creates the tunnel</li>
+      <li><strong>mGRE</strong> — lets one tunnel interface have many destinations</li>
+      <li><strong>NHRP</strong> — discovers where those destinations actually are</li>
+    </ul>
+    <div class="callout">
+      <p>That's why a DMVPN hub's running config shows <code>tunnel mode gre multipoint</code> but <em>never</em> a <code>tunnel destination</code> — NHRP is telling mGRE where the spokes are, dynamically, at runtime.</p>
+    </div>
+
+    <div class="sec-head"><span class="sec-label">Point-to-Point vs. mGRE, Side by Side</span><span class="sec-line"></span></div>
+    <div class="table-wrap">
+    <table class="comparison-table">
+      <tr><th></th><th>Point-to-Point GRE</th><th>mGRE</th></tr>
+      <tr><td>Tunnel destination</td><td class="yes">Configured manually, one peer</td><td class="no">Not configured at all</td></tr>
+      <tr><td>Number of remote peers</td><td>1</td><td>Many (hub-and-spoke or spoke-to-spoke)</td></tr>
+      <tr><td>Needs NHRP?</td><td class="no">No — only one possible path</td><td class="yes">Yes — destinations are learned dynamically</td></tr>
+    </table>
+    </div>
+
+    <div class="sec-head"><span class="sec-label">NHRP as Overlay↔Underlay Translator</span><span class="sec-line"></span></div>
+    <p>The cleanest mental model for NHRP is as a translator sitting between two networks:</p>
+    <div class="question-grid">
+      <div class="q-cell label">Overlay</div>
+      <div class="q-cell value">The network your routing protocol actually sees — tunnel addresses like <code>10.0.0.1</code>, <code>10.0.0.11</code>, <code>10.0.0.12</code>. OSPF, EIGRP, or BGP run here.</div>
+      <div class="q-cell label">Underlay</div>
+      <div class="q-cell value">The real transport network — in most DMVPN labs, public Internet IPs like <code>100.1.1.1</code>, <code>200.1.1.11</code>, <code>200.1.1.12</code>. This is what the ISP actually routes.</div>
+      <div class="q-cell label">NHRP database</div>
+      <div class="q-cell value">The mapping between the two: <code>10.0.0.11 → 200.1.1.11</code>, <code>10.0.0.12 → 200.1.1.12</code>, learned dynamically from spoke registration.</div>
+    </div>
+    <p>A precise, exam-ready definition:</p>
+    <blockquote>NHRP resolves DMVPN overlay tunnel addresses into underlay transport addresses, allowing mGRE tunnels to dynamically discover and reach remote spokes.</blockquote>
+    <p>Many engineers anchor this with a one-line analogy:</p>
+    <div class="callout insight">
+      <p><strong>ARP : Ethernet :: NHRP : DMVPN.</strong> Both translate a logical address into a physical one — ARP maps an IP to a MAC on a LAN segment; NHRP maps a tunnel (overlay) IP to a transport (underlay) IP across a DMVPN cloud. Different layers, same job.</p>
+    </div>
+
+    <div class="sec-head"><span class="sec-label">What the Underlay Actually Is</span><span class="sec-line"></span></div>
+    <p>In the overwhelming majority of DMVPN labs and real deployments, the underlay is the public Internet — so "underlay = public IPs" is a safe shortcut to memorize. But the formal definition is broader:</p>
+    <blockquote>Underlay = whatever network is responsible for transporting the tunnel packets.</blockquote>
+    <p>That can equally be MPLS, a provider WAN, a private WAN, or a cloud provider's network — the underlay is a role, not a specific address space. DMVPN just happens to be built on top of it most often over the public Internet.</p>
+
+    <div class="sec-head"><span class="sec-label">One-Minute Summary</span><span class="sec-line"></span></div>
+    <ul>
+      <li>Point-to-point GRE always needs a manually configured <code>tunnel destination</code> — there's exactly one peer, so nothing needs to be discovered.</li>
+      <li>mGRE removes <code>tunnel destination</code> entirely because one tunnel interface serves many peers, and no single address would be correct.</li>
+      <li>NHRP fills the gap mGRE leaves behind: spokes register <code>tunnel IP → physical IP</code>, and the hub (and other spokes, in Phase 3) build a dynamic resolution table from those registrations.</li>
+      <li>Overlay = tunnel addresses, where routing protocols live. Underlay = transport addresses, almost always public IPs in lab scenarios, but formally just "whatever carries the tunnel traffic."</li>
+      <li>NHRP is the overlay↔underlay translator — the same conceptual job ARP does for IP↔MAC on Ethernet.</li>
+    </ul>
+
+    <p><a href="/ccie-ospf/">&larr; Back to overview</a></p>
+  </main>
+
+  <footer class="site">
+    <p>&copy; 2026 Ioannis Konstas &middot; <a href="https://github.com/ikonstas70">github.com/ikonstas70</a></p>
+  </footer>
+</div>
+</body>
+</html>
