@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="canonical" href="https://ikonstas70.github.io/ccie-ospf/ospf-inter-area-cost-calculation.html">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OSPF Cost Calculation: How a Summary LSA Becomes a Routing Table Entry | Mastering OSPF</title>
+<meta name="description" content="Why the metric in a Type-3 Summary LSA differs from the O IA metric in the routing table: the router adds its own cost to the ABR.">
+<meta name="author" content="Ioannis Alexander Konstas">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Mastering OSPF">
+<meta property="og:title" content="OSPF Cost Calculation: How a Summary LSA Becomes a Routing Table Entry">
+<meta property="og:description" content="Why the metric in a Type-3 Summary LSA differs from the O IA metric in the routing table: the router adds its own cost to the ABR.">
+<meta property="og:url" content="https://ikonstas70.github.io/ccie-ospf/ospf-inter-area-cost-calculation.html">
+<meta property="og:image" content="https://ikonstas70.github.io/ccie-ospf/hero-chip.jpg">
+<meta property="og:image:secure_url" content="https://ikonstas70.github.io/ccie-ospf/hero-chip.jpg">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:width" content="1153">
+<meta property="og:image:height" content="228">
+<meta property="og:image:alt" content="Macro photograph of an integrated circuit die">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="OSPF Cost Calculation: How a Summary LSA Becomes a Routing Table Entry">
+<meta name="twitter:description" content="Why the metric in a Type-3 Summary LSA differs from the O IA metric in the routing table: the router adds its own cost to the ABR.">
+<meta name="twitter:image" content="https://ikonstas70.github.io/ccie-ospf/hero-chip.jpg">
+<link rel="stylesheet" href="/ccie-ospf/style.css">
+<!-- Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-BZK50T0JFT"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag("js",new Date());gtag("config","G-BZK50T0JFT");</script>
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <a class="brand" href="/ccie-ospf/">Mastering OSPF<em>.</em></a>
+    <div class="tagline">Chapter 05 &middot; Link-State Routing &middot; CCIE</div>
+    <div class="rule"></div>
+    <nav class="top">
+      <a href="/ccie-ospf/">Series</a>
+      <a href="/ccie-ospf/ospf-area-types-and-hierarchy.html">Areas</a>
+      <a href="/ccie-ospf/ospf-vs-bgp-summarization.html">Summarization</a>
+      <a href="/ccie-ospf/dmvpn-gre-mgre-nhrp.html">DMVPN</a>
+      <a href="/ccie-ospf/ospf-type5-lsa-external-reachability.html">Type-5 LSAs</a>
+      <a href="/ccie-ospf/ospf-inter-area-cost-calculation.html" class="active">Inter-Area Cost</a>
+      <a href="https://ikonstas70.github.io/">Home &#8593;</a>
+    </nav>
+  </header>
+
+  <main>
+    <img class="hero-banner" src="/ccie-ospf/hero-chip.jpg" alt="Macro photograph of an integrated circuit die">
+    <h1>OSPF Cost Calculation: How a Summary LSA Becomes a Routing Table Entry</h1>
+    <div class="meta">
+      <span class="tag">CCIE</span>
+      <span class="tag">OSPF</span>
+      <span class="tag">Type-3 LSA</span>
+      <span class="tag">ABR</span>
+      <span class="tag">O IA</span>
+      <span class="tag">Metric</span>
+    </div>
+
+    <div class="section-intro">
+      <p>One of the most misunderstood OSPF behaviors is how an inter-area route's metric ends up in the routing table. Engineers often notice that the metric carried inside a Summary LSA is not the metric that gets installed.</p>
+    </div>
+
+    <div class="callout">
+      <strong>The reason:</strong> the metric inside a Type-3 Summary LSA is never installed as-is. The receiving router adds its own cost to reach the router that advertised it, the ABR. That extra step is why OSPF behaves a little like a distance-vector protocol between areas, even though it is fundamentally link-state.
+    </div>
+
+    <!-- Section 1 -->
+    <div class="sec-head">
+      <div class="sec-label">
+        <span class="sec-count">01</span>
+        <h2>The Example</h2>
+      </div>
+      <div class="sec-line"></div>
+    </div>
+
+    <p>Assume a router in Area 10 holds the following Summary Network LSA:</p>
+
+    <div class="snippet">
+      <div class="snip-label">show ip ospf database summary 10.10.10.10</div>
+      <pre>            <span class="kw">Summary Net Link States (Area 10)</span>
+
+  <span class="kw">Link State ID:</span>      <span class="num">10.10.10.10</span> (summary Network Number)
+  <span class="kw">Advertising Router:</span> <span class="num">172.16.5.5</span>
+  <span class="kw">Network Mask:</span>       /<span class="num">32</span>
+        TOS: 0  <span class="kw">Metric:</span> <span class="num">1001</span></pre>
+      <button class="copy-btn">Copy</button>
+    </div>
+
+    <p>The important fields are:</p>
+    <ul>
+      <li><strong>Destination:</strong> 10.10.10.10/32. The network comes from the Link State ID; the prefix length comes from the <strong>Network Mask</strong> field.</li>
+      <li><strong>Advertising Router:</strong> 172.16.5.5, the ABR that originated this LSA into Area 10.</li>
+      <li><strong>Metric:</strong> 1001, the ABR's own best cost to reach the destination.</li>
+    </ul>
+
+    <p>The ABR has already run SPF in the area where 10.10.10.10 lives (or learned the route over the backbone) and advertises only the final result. The receiving router never sees the topology behind that number.</p>
+
+    <!-- Section 2 -->
+    <div class="sec-head">
+      <div class="sec-label">
+        <span class="sec-count">02</span>
+        <h2>What Happens Next</h2>
+      </div>
+      <div class="sec-line"></div>
+    </div>
+
+    <p>After reading the Summary LSA, the receiving router has one question left: <strong>how far away is the ABR?</strong></p>
+
+    <p>It doesn't run a separate SPF to find out. The ABR is a router in its own area, so it already sits in the router's intra-area SPF tree, flagged as an ABR by the B-bit in its Router LSA. The cost is already known. Suppose it is 1.</p>
+
+    <div class="highlight">
+      <p><strong>Final route metric</strong> = cost to reach the ABR + metric in the Summary LSA</p>
+      <p><strong>1 + 1001 = 1002</strong></p>
+    </div>
+
+    <h3>Routing table installation</h3>
+
+    <div class="snippet">
+      <div class="snip-label">show ip route ospf</div>
+      <pre><span class="kw">O IA</span>     <span class="num">10.10.10.10/32</span> [110/<span class="num">1002</span>] via 172.16.45.5, 00:04:12, GigabitEthernet0/1</pre>
+      <button class="copy-btn">Copy</button>
+    </div>
+
+    <table>
+      <thead>
+        <tr><th>Where you look</th><th>Metric</th><th>Meaning</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>Summary LSA</strong></td><td>1001</td><td>The ABR's cost to the destination</td></tr>
+        <tr><td><strong>Routing table</strong></td><td>1002</td><td>Your cost to the ABR plus the ABR's cost</td></tr>
+      </tbody>
+    </table>
+
+    <p>The routing table metric is larger because the local router has included its own path to the ABR.</p>
+
+    <!-- Section 3 -->
+    <div class="sec-head">
+      <div class="sec-label">
+        <span class="sec-count">03</span>
+        <h2>Where OSPF Gets Each Number</h2>
+      </div>
+      <div class="sec-line"></div>
+    </div>
+
+    <div class="snippet">
+      <div class="snip-label">Inter-area route calculation</div>
+      <pre>LSDB
+ └─ Type-3 Summary LSA        -> destination + ABR's metric (1001)
+     └─ Advertising Router    -> which ABR (172.16.5.5)
+         └─ Intra-area SPF    -> my cost to that ABR (1)
+             └─ Add them      -> 1 + 1001 = 1002
+                 └─ Install   -> O IA 10.10.10.10/32 [110/1002]</pre>
+      <button class="copy-btn">Copy</button>
+    </div>
+
+    <p>If this pattern looks familiar, it's the same split as <a href="/ccie-ospf/ospf-type5-lsa-external-reachability.html">Chapter 04</a>: one LSA describes the destination, and the path to the router that advertised it comes from somewhere else. For a Type-5 the router resolves the ASBR; for a Type-3 it resolves the ABR.</p>
+
+    <h3>Verify it on the router</h3>
+
+    <div class="snippet">
+      <div class="snip-label">show ip ospf border-routers</div>
+      <pre>OSPF Router with ID (172.16.4.4) (Process ID 1)
+
+            Base Topology (MTID 0)
+
+<span class="kw">Internal Router Routing Table</span>
+Codes: i - Intra-area route, I - Inter-area route
+
+i <span class="num">172.16.5.5</span> [<span class="num">1</span>] via 172.16.45.5, GigabitEthernet0/1, <span class="kw">ABR</span>, Area 10, SPF 7</pre>
+      <button class="copy-btn">Copy</button>
+    </div>
+
+    <p>The number in brackets, <strong>[1]</strong>, is your cost to the ABR. Add it to the metric from <code>show ip ospf database summary</code> and you get the metric in <code>show ip route</code>.</p>
+
+    <!-- Section 4 -->
+    <div class="sec-head">
+      <div class="sec-label">
+        <span class="sec-count">04</span>
+        <h2>Two ABRs: The Total Wins, Not the LSA</h2>
+      </div>
+      <div class="sec-line"></div>
+    </div>
+
+    <p>When two ABRs advertise the same prefix, the router does <em>not</em> pick the lower LSA metric. It compares the totals.</p>
+
+    <div class="snippet">
+      <div class="snip-label">Same prefix, two ABRs</div>
+      <pre>ABR-1:  LSA metric <span class="num">1001</span>  +  my cost to ABR-1 <span class="num">50</span>  =  <span class="num">1051</span>
+ABR-2:  LSA metric <span class="num">1010</span>  +  my cost to ABR-2 <span class="num">1</span>   =  <span class="num">1011</span>   <span class="kw">&lt;-- installed</span></pre>
+      <button class="copy-btn">Copy</button>
+    </div>
+
+    <p>ABR-2 advertises the worse metric but wins, because it is much closer. If the totals tie, both paths are installed as equal-cost routes (ECMP).</p>
+
+    <!-- Section 5 -->
+    <div class="sec-head">
+      <div class="sec-label">
+        <span class="sec-count">05</span>
+        <h2>Why This Looks Like Distance Vector</h2>
+      </div>
+      <div class="sec-line"></div>
+    </div>
+
+    <p>Inside an area, OSPF is pure link-state. Every router knows every router, every link and every interface cost, so SPF can calculate each path independently.</p>
+
+    <p>Between areas, that changes. The receiving router does not get the remote area's routers, links or SPF tree. The ABR simply says:</p>
+
+    <div class="callout">
+      <em>"I can reach 10.10.10.10 at cost 1001."</em>
+    </div>
+
+    <p>The receiving router accepts that number as fact. It can't check how the ABR arrived at 1001. That is exactly how a distance-vector protocol works: a neighbor advertises a destination and a distance, and you add your cost to that neighbor. OSPF inter-area routing has been described as <strong>"distance vector between areas"</strong> for exactly this reason.</p>
+
+    <!-- Section 6 -->
+    <div class="sec-head">
+      <div class="sec-label">
+        <span class="sec-count">06</span>
+        <h2>Why OSPF Is Still Not a Distance-Vector Protocol</h2>
+      </div>
+      <div class="sec-line"></div>
+    </div>
+
+    <ol>
+      <li><strong>Within each area, routing is link-state.</strong> Every router holds the full LSDB for its own area and runs SPF over it.</li>
+      <li><strong>ABRs build Summary LSAs from SPF results,</strong> not from routes heard hop by hop from neighbors.</li>
+      <li><strong>The inter-area part is kept loop-free by design, not by timers.</strong> Distance-vector protocols need split horizon, hold-downs and counting to infinity. OSPF instead forces a hub-and-spoke shape: every area must attach to Area 0, and an ABR only uses Summary LSAs it receives <em>over the backbone</em> when calculating inter-area routes.</li>
+    </ol>
+
+    <div class="callout tip">
+      <strong>CCIE Tip:</strong> that backbone rule is why a non-backbone area cannot pass inter-area routes on to another non-backbone area, and why a disconnected area needs a virtual link through a transit area. Without it, the distance-vector-like Type-3 exchange could loop.
+    </div>
+
+    <p>A better description: <strong>OSPF is a link-state protocol that uses distance-vector-like advertisement between areas, kept loop-free by the Area 0 hub-and-spoke rule.</strong></p>
+
+    <!-- Section 7 -->
+    <div class="sec-head">
+      <div class="sec-label">
+        <span class="sec-count">07</span>
+        <h2>CCIE Exam Takeaway</h2>
+      </div>
+      <div class="sec-line"></div>
+    </div>
+
+    <div class="highlight">
+      <p><strong>O IA installed metric</strong> = metric advertised by the ABR in the Type-3 LSA + local cost to reach the ABR</p>
+      <p>LSA says <strong>1001</strong>, cost to ABR is <strong>1</strong> &rarr; install <strong>1002</strong></p>
+    </div>
+
+    <p>The extra cost isn't hidden recursion. It's the normal OSPF inter-area calculation: the router adds its own shortest-path cost to the ABR before installing the route. That single detail explains why the metric in a Summary LSA so often differs from the one in the routing table.</p>
+
+    <div class="callout tip">
+      <ul>
+        <li><strong>"The Type-3 metric is the ABR's cost; the routing table metric is my cost to the ABR plus that."</strong></li>
+        <li><strong>"With two ABRs, the lowest total wins, not the lowest LSA metric."</strong></li>
+        <li><strong>"OSPF is distance vector between areas, and the backbone rule keeps it loop-free."</strong></li>
+      </ul>
+    </div>
+
+    <p style="margin-top: 3rem; text-align: center;">
+      <a href="/ccie-ospf/">&larr; Back to Overview</a>
+    </p>
+
+  </main>
+
+  <footer class="site">
+    <p>&copy; 2026 Ioannis Konstas &middot; <a href="https://github.com/ikonstas70">github.com/ikonstas70</a></p>
+  </footer>
+</div>
+
+<script>
+document.querySelectorAll('.copy-btn').forEach(b=>{b.addEventListener('click',()=>{const pre=b.closest('.snippet').querySelector('pre');const t=pre.innerText;navigator.clipboard.writeText(t).then(()=>{b.textContent='Copied';setTimeout(()=>b.textContent='Copy',1400)})})});
+</script>
+</body>
+</html>

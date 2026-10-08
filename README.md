@@ -10,6 +10,7 @@ A CCIE Enterprise Infrastructure series on link-state routing — area design, L
 | 02 | OSPF vs BGP — Summarization & Architecture | `ospf-vs-bgp-summarization.html` |
 | 03 | DMVPN — GRE, mGRE & NHRP | `dmvpn-gre-mgre-nhrp.html` |
 | 04 | OSPF Type-5 LSAs — Intra-Area vs Inter-Area Reachability | `ospf-type5-lsa-external-reachability.html` |
-| 05 | OSPFv3 — *in progress* | |
+| 05 | OSPF Cost Calculation — How a Summary LSA Becomes a Routing Table Entry | `ospf-inter-area-cost-calculation.html` |
+| 06 | OSPFv3 — *in progress* | |
 
 — Ioannis Alexander Konstas
