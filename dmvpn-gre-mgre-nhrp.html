@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<link rel="canonical" href="https://ikonstas70.github.io/ccie-ospf/dmvpn-gre-mgre-nhrp.html">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DMVPN: GRE, mGRE &amp; NHRP | Mastering OSPF</title>
+<meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1">
+<meta name="description" content="Overlay versus underlay, point-to-point versus multipoint tunnels, and how NHRP maps tunnel addresses to transport.">
+<meta name="author" content="Ioannis Alexander Konstas">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Mastering OSPF">
+<meta property="og:title" content="DMVPN: GRE, mGRE &amp; NHRP">
+<meta property="og:description" content="Overlay versus underlay, point-to-point versus multipoint tunnels, and how NHRP maps tunnel addresses to transport.">
+<meta property="og:url" content="https://ikonstas70.github.io/ccie-ospf/dmvpn-gre-mgre-nhrp.html">
+<meta property="og:image" content="https://ikonstas70.github.io/ccie-ospf/hero-chip.jpg">
+<meta property="og:image:secure_url" content="https://ikonstas70.github.io/ccie-ospf/hero-chip.jpg">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:width" content="1153">
+<meta property="og:image:height" content="228">
+<meta property="og:image:alt" content="Macro photograph of an integrated circuit die">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="DMVPN: GRE, mGRE &amp; NHRP">
+<meta name="twitter:description" content="Overlay versus underlay, point-to-point versus multipoint tunnels, and how NHRP maps tunnel addresses to transport.">
+<meta name="twitter:image" content="https://ikonstas70.github.io/ccie-ospf/hero-chip.jpg">
+<link rel="stylesheet" href="/ccie-ospf/style.css">
+<!-- Any page-specific styles in a <style> block -->
+<!-- Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-BZK50T0JFT"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag("js",new Date());gtag("config","G-BZK50T0JFT");</script>
+</head>
+<body>
+<div class="wrap">
+  <header class="site">
+    <a class="brand" href="/ccie-ospf/">Mastering OSPF<em>.</em></a>
+    <div class="tagline">Chapter 03 &middot; Link-State Routing &middot; CCIE</div>
+    <div class="rule"></div>
+    <nav class="top">
+      <a href="/ccie-ospf/">Series</a>
+      <a href="/ccie-ospf/ospf-area-types-and-hierarchy.html">Areas</a>
+      <a href="/ccie-ospf/ospf-vs-bgp-summarization.html">Summarization</a>
+      <a href="/ccie-ospf/dmvpn-gre-mgre-nhrp.html" class="active">DMVPN</a>
+      <a href="/ccie-ospf/ospf-type5-lsa-external-reachability.html">Type-5 LSAs</a>
+      <a href="/ccie-ospf/ospf-inter-area-cost-calculation.html">Inter-Area Cost</a>
+      <a href="https://ikonstas70.github.io/">Home &#8593;</a>
+    </nav>
+  </header>
+
+  <main>
+    <img class="hero-banner" src="/ccie-ospf/hero-chip.jpg" alt="Macro photograph of an integrated circuit die">
+    <div style="margin-top: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+      <span class="tag">CCIE</span>
+      <span class="tag">DMVPN</span>
+      <span class="tag">GRE</span>
+      <span class="tag">NHRP</span>
+    </div>
+    
+    <h1>DMVPN — GRE, mGRE & NHRP</h1>
+    <div class="meta">By Ioannis Alexander Konstas &middot; October 2026</div>
+    <p class="section-intro">
+      Dynamic Multipoint VPN (DMVPN) simplifies the deployment of large-scale hub-and-spoke VPNs. Understanding the underlying components—GRE, mGRE, and NHRP—is critical for mastering the DMVPN architecture for the CCIE Enterprise Infrastructure exam.
+    </p>
+
+    <!-- SECTION 1 -->
+    <h2 class="sec-head">
+      <span class="sec-count">1</span>
+      <span class="sec-label">Point-to-Point GRE</span>
+      <span class="sec-line"></span>
+    </h2>
+    <p>
+      Standard Generic Routing Encapsulation (GRE) creates a point-to-point tunnel. This requires the configuration of an explicit <code>tunnel destination</code> on the tunnel interface. There is a strict one-to-one mapping between the local tunnel interface and the remote endpoint.
+    </p>
+    <div class="snippet">
+      <div class="snip-label">Standard GRE Configuration</div>
+      <pre>interface Tunnel0
+ tunnel source Gi0/0
+ tunnel destination 2.2.2.2</pre>
+      <button class="copy-btn">Copy</button>
+    </div>
+    <p>
+      In this model, the router knows exactly where to build the tunnel. It is perfectly suited for site-to-site connections where the endpoints are known and static. However, scaling this to hundreds of spokes becomes an administrative nightmare, as each spoke requires a dedicated tunnel interface and subnet on the hub.
+    </p>
+
+    <!-- SECTION 2 -->
+    <h2 class="sec-head">
+      <span class="sec-count">2</span>
+      <span class="sec-label">Multipoint GRE (mGRE)</span>
+      <span class="sec-line"></span>
+    </h2>
+    <p>
+      To solve the hub-and-spoke scalability issue, we use <strong>Multipoint GRE (mGRE)</strong>. With mGRE, the hub doesn't need to specify a single destination. Instead, it uses a single tunnel interface to serve all spokes (e.g., Spoke1, Spoke2, ... Spoke100).
+    </p>
+    <div class="snippet">
+      <div class="snip-label">mGRE Interface Mode</div>
+      <pre>interface Tunnel0
+ tunnel mode gre multipoint</pre>
+      <button class="copy-btn">Copy</button>
+    </div>
+    <p>
+      Notice that the <code>tunnel destination</code> command is entirely absent. 
+    </p>
+    <div class="callout tip">
+      <strong>Key Insight:</strong> mGRE provides the <em>ability to send</em> encapsulated packets out of multiple dynamic endpoints, but natively, it <strong>doesn't know WHERE to send them</strong>. It needs an external mechanism to resolve the destinations.
+    </div>
+
+    <!-- SECTION 3 -->
+    <h2 class="sec-head">
+      <span class="sec-count">3</span>
+      <span class="sec-label">NHRP — The Resolution Protocol</span>
+      <span class="sec-line"></span>
+    </h2>
+    <p>
+      The Next Hop Resolution Protocol (NHRP) solves the "where to send" problem inherent to mGRE. Spokes proactively register their tunnel IP (overlay) to physical IP (underlay) mappings with the hub (the NHRP Server or NHS).
+    </p>
+    <ul>
+      <li><strong>Spoke1:</strong> Tunnel IP <code>10.0.0.11</code> &rarr; Physical IP <code>200.1.1.11</code></li>
+      <li><strong>Spoke2:</strong> Tunnel IP <code>10.0.0.12</code> &rarr; Physical IP <code>200.1.1.12</code></li>
+    </ul>
+    <p>
+      The hub dynamically builds an NHRP mapping table from these registrations.
+    </p>
+    <div class="callout tip">
+      <strong>The ARP Analogy:</strong> Just as ARP resolves a logical IP address to a physical MAC address on an Ethernet segment, NHRP resolves a logical DMVPN Tunnel IP to a physical Underlay IP address.
+    </div>
+
+    <!-- SECTION 4 -->
+    <h2 class="sec-head">
+      <span class="sec-count">4</span>
+      <span class="sec-label">Overlay vs Underlay</span>
+      <span class="sec-line"></span>
+    </h2>
+    <p>
+      Understanding DMVPN requires strict separation between the overlay and underlay networks.
+    </p>
+    <table>
+      <thead>
+        <tr>
+          <th>Network Layer</th>
+          <th>Description</th>
+          <th>Routing Protocol Role</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Overlay</strong></td>
+          <td>The tunnel IP addresses (e.g., <code>10.0.0.x</code>).</td>
+          <td>Where dynamic routing protocols like OSPF, EIGRP, or BGP form neighbor adjacencies.</td>
+        </tr>
+        <tr>
+          <td><strong>Underlay</strong></td>
+          <td>The physical transport network (e.g., public ISPs, MPLS).</td>
+          <td>Provides the actual end-to-end transport IP reachability for the encapsulated packets.</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="callout">
+      <strong>CCIE Definition:</strong> "NHRP resolves DMVPN overlay tunnel addresses into underlay transport addresses."
+    </div>
+
+    <!-- SECTION 5 -->
+    <h2 class="sec-head">
+      <span class="sec-count">5</span>
+      <span class="sec-label">The DMVPN Stack</span>
+      <span class="sec-line"></span>
+    </h2>
+    <p>
+      DMVPN is not a single protocol, but a combination of three technologies working together seamlessly:
+    </p>
+    <ul>
+      <li><strong>GRE</strong> = The encapsulation protocol used for tunnel creation.</li>
+      <li><strong>NHRP</strong> = The destination resolution database.</li>
+      <li><strong>IPsec</strong> = The encryption payload ensuring data confidentiality and integrity (though optional, it's universally deployed).</li>
+    </ul>
+    <div class="highlight">
+      <strong>Summary:</strong><br>
+      <strong>mGRE</strong> says, <em>"I can send to multiple peers from one interface."</em><br>
+      <strong>NHRP</strong> says, <em>"Here is exactly where to send to reach a specific peer."</em><br>
+      Without NHRP, mGRE wouldn't know where the spokes are located. Without mGRE, NHRP wouldn't have a multipoint tunnel interface to utilize.
+    </div>
+
+    <!-- SECTION 6 -->
+    <h2 class="sec-head">
+      <span class="sec-count">6</span>
+      <span class="sec-label">Hub vs Spoke Configuration</span>
+      <span class="sec-line"></span>
+    </h2>
+    <p>
+      Let's look at the baseline configuration for a DMVPN Phase 1 or Phase 2 hub and spoke.
+    </p>
+    
+    <div class="snippet">
+      <div class="snip-label">Hub Router Configuration</div>
+      <pre><span class="kw">interface</span> Tunnel0
+ <span class="kw">ip address</span> <span class="num">10.0.0.1 255.255.255.0</span>
+ <span class="kw">tunnel source</span> GigabitEthernet0/0
+ <span class="kw">tunnel mode gre multipoint</span>
+ <span class="kw">ip nhrp network-id</span> <span class="num">1</span>
+ <span class="kw">ip nhrp map multicast dynamic</span></pre>
+      <button class="copy-btn">Copy</button>
+    </div>
+
+    <div class="snippet">
+      <div class="snip-label">Spoke Router Configuration</div>
+      <pre><span class="kw">interface</span> Tunnel0
+ <span class="kw">ip address</span> <span class="num">10.0.0.11 255.255.255.0</span>
+ <span class="kw">tunnel source</span> GigabitEthernet0/0
+ <span class="kw">tunnel mode gre multipoint</span>
+ <span class="kw">ip nhrp network-id</span> <span class="num">1</span>
+ <span class="kw">ip nhrp nhs</span> <span class="num">10.0.0.1</span>
+ <span class="kw">ip nhrp map</span> <span class="num">10.0.0.1 100.1.1.1</span>
+ <span class="kw">ip nhrp map multicast</span> <span class="num">100.1.1.1</span></pre>
+      <button class="copy-btn">Copy</button>
+    </div>
+
+    <div style="margin-top: 3rem; text-align: center;">
+      <a href="/ccie-ospf/" style="color: var(--accent); text-decoration: none;">&larr; Back to Overview</a>
+    </div>
+
+  </main>
+
+  <footer class="site">
+    <p>&copy; 2026 Ioannis Konstas &middot; <a href="https://github.com/ikonstas70">github.com/ikonstas70</a></p>
+  </footer>
+</div>
+
+<script>
+document.querySelectorAll('.copy-btn').forEach(b=>{b.addEventListener('click',()=>{const pre=b.closest('.snippet').querySelector('pre');const t=pre.innerText;navigator.clipboard.writeText(t).then(()=>{b.textContent='Copied';setTimeout(()=>b.textContent='Copy',1400)})})});
+</script>
+</body>
+</html>
